@@ -14,7 +14,7 @@
         </div>
     @else
         <div class="alert alert-warning">
-            <strong>Importante:</strong> Al registrar una instalación, se reducirá <strong>1 unidad</strong> del stock del suministro seleccionado.
+            <strong>Importante:</strong> Al registrar una instalación, se reducirá la cantidad indicada del stock del suministro seleccionado.
             Solo se muestran suministros con stock disponible.
         </div>
 
@@ -53,6 +53,19 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="cantidad">Cantidad a Instalar *</label>
+                        <input type="number" 
+                               id="cantidad" 
+                               name="cantidad" 
+                               class="form-control" 
+                               value="{{ old('cantidad', 1) }}"
+                               min="1"
+                               placeholder="Cantidad"
+                               required>
+                        <small class="text-muted">Ingrese cuántas unidades desea instalar</small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="fecha_instalacion">Fecha de Instalación *</label>
                         <input type="date" 
                                id="fecha_instalacion" 
@@ -86,15 +99,26 @@
                             </span>
                         </div>
                         <div class="detail-row" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #ddd;">
-                            <span class="detail-label">Stock después de instalación:</span>
+                            <span class="detail-label">Cantidad a instalar:</span>
                             <span class="detail-value">
-                                <span id="info-nuevo-stock" class="badge badge-warning" style="font-size: 1rem;">-</span>
+                                <span id="info-cantidad" class="badge badge-warning" style="font-size: 1rem;">-</span>
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Stock después:</span>
+                            <span class="detail-value">
+                                <span id="info-nuevo-stock" class="badge" style="font-size: 1rem;">-</span>
                             </span>
                         </div>
                     </div>
 
                     <div id="sin-seleccion" class="card" style="background-color: #f8f9fa; text-align: center; padding: 2rem;">
                         <p class="text-muted">Seleccione un suministro para ver su información</p>
+                    </div>
+
+                    <div id="stock-error" class="alert alert-danger" style="display: none; margin-top: 1rem;">
+                        <strong>⚠ Stock Insuficiente</strong><br>
+                        <span id="stock-error-msg"></span>
                     </div>
                 </div>
             </div>
@@ -113,8 +137,11 @@
 @push('scripts')
 <script>
     const suministroSelect = document.getElementById('id_suministro');
+    const cantidadInput = document.getElementById('cantidad');
     const suministroInfo = document.getElementById('suministro-info');
     const sinSeleccion = document.getElementById('sin-seleccion');
+    const stockError = document.getElementById('stock-error');
+    const stockErrorMsg = document.getElementById('stock-error-msg');
     const btnSubmit = document.getElementById('btn-submit');
 
     function updateSuministroInfo() {
@@ -125,30 +152,51 @@
             const descripcion = selectedOption.dataset.descripcion;
             const marca = selectedOption.dataset.marca;
             const categoria = selectedOption.dataset.categoria;
-            const nuevoStock = stock - 1;
+            const cantidad = parseInt(cantidadInput.value) || 1;
+            const nuevoStock = stock - cantidad;
 
             document.getElementById('info-descripcion').textContent = descripcion;
             document.getElementById('info-marca').textContent = marca;
             document.getElementById('info-categoria').textContent = categoria;
             
+            // Stock actual
             const stockBadge = document.getElementById('info-stock-badge');
             stockBadge.textContent = stock;
             stockBadge.className = 'badge ' + (stock <= 5 ? (stock == 0 ? 'badge-danger' : 'badge-warning') : 'badge-success');
             
+            // Cantidad a instalar
+            document.getElementById('info-cantidad').textContent = '-' + cantidad;
+            
+            // Nuevo stock
             const nuevoStockBadge = document.getElementById('info-nuevo-stock');
             nuevoStockBadge.textContent = nuevoStock;
-            nuevoStockBadge.className = 'badge ' + (nuevoStock <= 5 ? (nuevoStock == 0 ? 'badge-danger' : 'badge-warning') : 'badge-success');
-            nuevoStockBadge.style.fontSize = '1rem';
+            
+            if (nuevoStock < 0) {
+                nuevoStockBadge.className = 'badge badge-danger';
+                nuevoStockBadge.style.fontSize = '1rem';
+            } else {
+                nuevoStockBadge.className = 'badge ' + (nuevoStock <= 5 ? (nuevoStock == 0 ? 'badge-danger' : 'badge-warning') : 'badge-success');
+                nuevoStockBadge.style.fontSize = '1rem';
+            }
 
             suministroInfo.style.display = 'block';
             sinSeleccion.style.display = 'none';
 
-            // Validar que hay stock
-            if (stock < 1) {
+            // Validar stock suficiente
+            if (cantidad > stock) {
+                stockError.style.display = 'block';
+                stockErrorMsg.textContent = 'La cantidad solicitada (' + cantidad + ') excede el stock disponible (' + stock + ')';
                 btnSubmit.disabled = true;
-                btnSubmit.textContent = 'Sin Stock Disponible';
+                btnSubmit.textContent = 'Stock Insuficiente';
+                btnSubmit.className = 'btn btn-danger';
+            } else if (stock < 1) {
+                stockError.style.display = 'block';
+                stockErrorMsg.textContent = 'Este suministro no tiene stock disponible';
+                btnSubmit.disabled = true;
+                btnSubmit.textContent = 'Sin Stock';
                 btnSubmit.className = 'btn btn-danger';
             } else {
+                stockError.style.display = 'none';
                 btnSubmit.disabled = false;
                 btnSubmit.textContent = 'Registrar Instalación';
                 btnSubmit.className = 'btn btn-success';
@@ -156,6 +204,7 @@
         } else {
             suministroInfo.style.display = 'none';
             sinSeleccion.style.display = 'block';
+            stockError.style.display = 'none';
             btnSubmit.disabled = false;
             btnSubmit.textContent = 'Registrar Instalación';
             btnSubmit.className = 'btn btn-success';
@@ -163,6 +212,7 @@
     }
 
     suministroSelect.addEventListener('change', updateSuministroInfo);
+    cantidadInput.addEventListener('input', updateSuministroInfo);
 
     // Inicializar si hay valor preseleccionado
     if (suministroSelect.value) {
@@ -174,9 +224,10 @@
         const selectedOption = suministroSelect.options[suministroSelect.selectedIndex];
         if (selectedOption && selectedOption.value) {
             const stock = parseInt(selectedOption.dataset.stock) || 0;
-            if (stock < 1) {
+            const cantidad = parseInt(cantidadInput.value) || 1;
+            if (cantidad > stock) {
                 e.preventDefault();
-                alert('Error: El suministro seleccionado no tiene stock disponible.');
+                alert('Error: La cantidad solicitada (' + cantidad + ') excede el stock disponible (' + stock + ')');
                 return false;
             }
         }

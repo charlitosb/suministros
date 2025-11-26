@@ -22,6 +22,7 @@ return new class extends Migration
                   ->constrained('equipos')
                   ->onDelete('restrict')
                   ->onUpdate('cascade');
+            $table->integer('cantidad')->default(1);
             $table->timestamps();
             
             // Índice para búsquedas por fecha

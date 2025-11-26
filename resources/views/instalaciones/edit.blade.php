@@ -7,7 +7,7 @@
 
 <div class="card" style="max-width: 700px;">
     <div class="alert alert-warning">
-        <strong>Advertencia:</strong> Cambiar el suministro afectará el stock de ambos suministros (el anterior y el nuevo).
+        <strong>Advertencia:</strong> Cambiar el suministro o la cantidad afectará el stock correspondiente.
     </div>
 
     <form action="{{ route('instalaciones.update', $instalacione) }}" method="POST">
@@ -45,6 +45,18 @@
         </div>
 
         <div class="form-group">
+            <label for="cantidad">Cantidad *</label>
+            <input type="number" 
+                   id="cantidad" 
+                   name="cantidad" 
+                   class="form-control" 
+                   value="{{ old('cantidad', $instalacione->cantidad ?? 1) }}"
+                   min="1"
+                   required>
+            <small class="text-muted">Cantidad actual: {{ $instalacione->cantidad ?? 1 }}</small>
+        </div>
+
+        <div class="form-group">
             <label for="fecha_instalacion">Fecha de Instalación *</label>
             <input type="date" 
                    id="fecha_instalacion" 
@@ -55,7 +67,7 @@
         </div>
 
         <div id="stock-warning" class="alert alert-danger" style="display: none;">
-            <strong>⚠ Advertencia:</strong> El suministro seleccionado no tiene stock disponible.
+            <strong>⚠ Advertencia:</strong> <span id="stock-warning-msg"></span>
         </div>
 
         <div class="btn-group" style="margin-top: 1.5rem;">
@@ -69,20 +81,27 @@
 @push('scripts')
 <script>
     const suministroSelect = document.getElementById('id_suministro');
+    const cantidadInput = document.getElementById('cantidad');
     const stockWarning = document.getElementById('stock-warning');
+    const stockWarningMsg = document.getElementById('stock-warning-msg');
     const btnSubmit = document.getElementById('btn-submit');
+    
     const suministroActualId = {{ $instalacione->id_suministro }};
+    const cantidadActual = {{ $instalacione->cantidad ?? 1 }};
 
     function checkStock() {
         const selectedOption = suministroSelect.options[suministroSelect.selectedIndex];
         if (selectedOption && selectedOption.value) {
             const stock = parseInt(selectedOption.dataset.stock) || 0;
             const esElMismo = parseInt(selectedOption.value) === suministroActualId;
+            const cantidad = parseInt(cantidadInput.value) || 1;
             
-            // Si es el mismo suministro, no hay problema
-            // Si es diferente, necesita tener stock
-            if (!esElMismo && stock < 1) {
+            // Si es el mismo suministro, el stock disponible incluye la cantidad actual
+            const stockDisponible = esElMismo ? stock + cantidadActual : stock;
+            
+            if (cantidad > stockDisponible) {
                 stockWarning.style.display = 'block';
+                stockWarningMsg.textContent = 'La cantidad solicitada (' + cantidad + ') excede el stock disponible (' + stockDisponible + ')';
                 btnSubmit.disabled = true;
             } else {
                 stockWarning.style.display = 'none';
@@ -92,6 +111,7 @@
     }
 
     suministroSelect.addEventListener('change', checkStock);
+    cantidadInput.addEventListener('input', checkStock);
     checkStock();
 </script>
 @endpush

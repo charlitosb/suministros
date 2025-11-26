@@ -51,7 +51,7 @@ class InstalacionSuministroController extends Controller
 
     /**
      * Almacenar una nueva instalación.
-     * IMPORTANTE: Este método decrementa el stock del suministro.
+     * IMPORTANTE: Este método decrementa el stock del suministro según la cantidad.
      * MÁXIMA PRIORIDAD: Validación robusta de stock.
      */
     public function store(Request $request)
@@ -60,6 +60,7 @@ class InstalacionSuministroController extends Controller
             'id_suministro' => 'required|exists:suministros,id',
             'id_equipo' => 'required|exists:equipos,id',
             'fecha_instalacion' => 'required|date',
+            'cantidad' => 'required|integer|min:1',
         ], [
             'id_suministro.required' => 'Debe seleccionar un suministro.',
             'id_suministro.exists' => 'El suministro seleccionado no existe.',
@@ -67,10 +68,15 @@ class InstalacionSuministroController extends Controller
             'id_equipo.exists' => 'El equipo seleccionado no existe.',
             'fecha_instalacion.required' => 'La fecha de instalación es obligatoria.',
             'fecha_instalacion.date' => 'La fecha de instalación debe ser una fecha válida.',
+            'cantidad.required' => 'La cantidad es obligatoria.',
+            'cantidad.integer' => 'La cantidad debe ser un número entero.',
+            'cantidad.min' => 'La cantidad mínima es 1.',
         ]);
 
         try {
             DB::beginTransaction();
+
+            $cantidad = (int) $request->cantidad;
 
             // VALIDACIÓN CRÍTICA: Verificar stock disponible
             $suministro = Suministro::lockForUpdate()->find($request->id_suministro);
@@ -81,12 +87,12 @@ class InstalacionSuministroController extends Controller
                 ]);
             }
 
-            if ($suministro->stock < 1) {
+            if ($suministro->stock < $cantidad) {
                 throw ValidationException::withMessages([
                     'id_suministro' => [
-                        'No hay stock disponible para este suministro. ' .
-                        'Stock actual: ' . $suministro->stock . '. ' .
-                        'Debe realizar un ingreso antes de poder instalar.'
+                        "No hay stock suficiente. " .
+                        "Solicitado: {$cantidad}, Disponible: {$suministro->stock}. " .
+                        "Debe realizar un ingreso antes de poder instalar."
                     ]
                 ]);
             }
@@ -96,6 +102,7 @@ class InstalacionSuministroController extends Controller
                 'fecha_instalacion' => $request->fecha_instalacion,
                 'id_suministro' => $request->id_suministro,
                 'id_equipo' => $request->id_equipo,
+                'cantidad' => $cantidad,
             ]);
 
             DB::commit();
@@ -105,9 +112,9 @@ class InstalacionSuministroController extends Controller
 
             return redirect()->route('instalaciones.show', $instalacion)
                 ->with('success', 
-                    'Instalación registrada exitosamente. ' .
-                    'Se ha reducido 1 unidad del stock de "' . $instalacion->suministro->descripcion . '". ' .
-                    'Stock actual: ' . $instalacion->suministro->fresh()->stock
+                    "Instalación registrada exitosamente. " .
+                    "Se han reducido {$cantidad} unidades del stock de \"{$instalacion->suministro->descripcion}\". " .
+                    "Stock actual: " . $instalacion->suministro->fresh()->stock
                 );
 
         } catch (ValidationException $e) {
@@ -159,7 +166,7 @@ class InstalacionSuministroController extends Controller
 
     /**
      * Actualizar una instalación.
-     * NOTA: Cambiar el suministro afecta el stock de ambos.
+     * NOTA: Cambiar el suministro o cantidad afecta el stock.
      */
     public function update(Request $request, InstalacionSuministro $instalacione)
     {
@@ -167,6 +174,7 @@ class InstalacionSuministroController extends Controller
             'id_suministro' => 'required|exists:suministros,id',
             'id_equipo' => 'required|exists:equipos,id',
             'fecha_instalacion' => 'required|date',
+            'cantidad' => 'required|integer|min:1',
         ], [
             'id_suministro.required' => 'Debe seleccionar un suministro.',
             'id_suministro.exists' => 'El suministro seleccionado no existe.',
@@ -174,6 +182,9 @@ class InstalacionSuministroController extends Controller
             'id_equipo.exists' => 'El equipo seleccionado no existe.',
             'fecha_instalacion.required' => 'La fecha de instalación es obligatoria.',
             'fecha_instalacion.date' => 'La fecha de instalación debe ser una fecha válida.',
+            'cantidad.required' => 'La cantidad es obligatoria.',
+            'cantidad.integer' => 'La cantidad debe ser un número entero.',
+            'cantidad.min' => 'La cantidad mínima es 1.',
         ]);
 
         try {
@@ -181,34 +192,59 @@ class InstalacionSuministroController extends Controller
 
             $suministroAnterior = $instalacione->id_suministro;
             $suministroNuevo = $request->id_suministro;
+            $cantidadAnterior = $instalacione->cantidad ?? 1;
+            $cantidadNueva = (int) $request->cantidad;
 
-            // Si cambió el suministro, ajustar stocks
+            // Caso 1: Cambió el suministro
             if ($suministroAnterior != $suministroNuevo) {
-                // Verificar que el nuevo suministro tenga stock
+                // Verificar que el nuevo suministro tenga stock suficiente
                 $nuevoSuministro = Suministro::lockForUpdate()->find($suministroNuevo);
                 
-                if ($nuevoSuministro->stock < 1) {
+                if ($nuevoSuministro->stock < $cantidadNueva) {
                     throw ValidationException::withMessages([
                         'id_suministro' => [
-                            'No hay stock disponible para el suministro seleccionado. ' .
-                            'Stock actual: ' . $nuevoSuministro->stock
+                            "No hay stock suficiente en el suministro seleccionado. " .
+                            "Solicitado: {$cantidadNueva}, Disponible: {$nuevoSuministro->stock}"
                         ]
                     ]);
                 }
 
-                // Devolver stock al suministro anterior
-                Suministro::where('id', $suministroAnterior)->increment('stock', 1);
+                // Devolver stock completo al suministro anterior
+                Suministro::where('id', $suministroAnterior)->increment('stock', $cantidadAnterior);
                 
                 // Decrementar stock del nuevo suministro
-                Suministro::where('id', $suministroNuevo)->decrement('stock', 1);
+                Suministro::where('id', $suministroNuevo)->decrement('stock', $cantidadNueva);
+            }
+            // Caso 2: Mismo suministro pero diferente cantidad
+            elseif ($cantidadAnterior != $cantidadNueva) {
+                $suministro = Suministro::lockForUpdate()->find($suministroAnterior);
+                $diferencia = $cantidadNueva - $cantidadAnterior;
+                
+                // Si aumentó la cantidad, verificar que haya stock
+                if ($diferencia > 0 && $suministro->stock < $diferencia) {
+                    throw ValidationException::withMessages([
+                        'cantidad' => [
+                            "No hay stock suficiente para aumentar la cantidad. " .
+                            "Stock disponible: {$suministro->stock}, Necesario: {$diferencia}"
+                        ]
+                    ]);
+                }
+                
+                // Ajustar stock según la diferencia
+                if ($diferencia > 0) {
+                    $suministro->decrement('stock', $diferencia);
+                } else {
+                    $suministro->increment('stock', abs($diferencia));
+                }
             }
 
-            // Actualizar sin disparar eventos
+            // Actualizar sin disparar eventos del modelo
             $instalacione->timestamps = false;
             $instalacione->update([
                 'fecha_instalacion' => $request->fecha_instalacion,
                 'id_suministro' => $suministroNuevo,
                 'id_equipo' => $request->id_equipo,
+                'cantidad' => $cantidadNueva,
             ]);
             $instalacione->timestamps = true;
 
@@ -230,7 +266,7 @@ class InstalacionSuministroController extends Controller
 
     /**
      * Eliminar una instalación.
-     * IMPORTANTE: Eliminar una instalación devuelve el stock.
+     * IMPORTANTE: Eliminar una instalación devuelve el stock según la cantidad.
      */
     public function destroy(InstalacionSuministro $instalacione)
     {
@@ -238,6 +274,7 @@ class InstalacionSuministroController extends Controller
             DB::beginTransaction();
 
             $suministro = $instalacione->suministro;
+            $cantidad = $instalacione->cantidad ?? 1;
             
             // El modelo se encarga de incrementar el stock al eliminar
             $instalacione->delete();
@@ -246,8 +283,8 @@ class InstalacionSuministroController extends Controller
 
             return redirect()->route('instalaciones.index')
                 ->with('success', 
-                    'Instalación eliminada exitosamente. ' .
-                    'Se ha devuelto 1 unidad al stock de "' . $suministro->descripcion . '".'
+                    "Instalación eliminada exitosamente. " .
+                    "Se han devuelto {$cantidad} unidades al stock de \"{$suministro->descripcion}\"."
                 );
 
         } catch (\Exception $e) {

@@ -130,12 +130,54 @@ class InventarioController extends Controller
             }
         }
 
+        // Filtro por búsqueda de texto
+        if ($request->filled('buscar')) {
+            $buscar = $request->buscar;
+            $query->where(function($q) use ($buscar) {
+                $q->where('descripcion', 'like', "%{$buscar}%")
+                  ->orWhereHas('marca', function($q2) use ($buscar) {
+                      $q2->where('descripcion', 'like', "%{$buscar}%");
+                  });
+            });
+        }
+
         $suministros = $query->orderBy('descripcion')->get();
 
-        // Obtener nombre del filtro de categoría si aplica
-        $categoriaFiltro = null;
+        // Obtener información de filtros aplicados
+        $filtrosAplicados = [];
+        
         if ($request->filled('categoria_id')) {
-            $categoriaFiltro = Categoria::find($request->categoria_id);
+            $categoria = Categoria::find($request->categoria_id);
+            if ($categoria) {
+                $filtrosAplicados['Categoría'] = $categoria->nombre_categoria;
+            }
+        }
+
+        if ($request->filled('marca_id')) {
+            $marca = Marca::find($request->marca_id);
+            if ($marca) {
+                $filtrosAplicados['Marca'] = $marca->descripcion;
+            }
+        }
+
+        if ($request->filled('tipo_equipo_id')) {
+            $tipo = TipoEquipo::find($request->tipo_equipo_id);
+            if ($tipo) {
+                $filtrosAplicados['Tipo Equipo'] = $tipo->descripcion;
+            }
+        }
+
+        if ($request->filled('estado_stock')) {
+            $estados = [
+                'sin_stock' => 'Sin Stock',
+                'bajo_stock' => 'Stock Bajo (≤5)',
+                'con_stock' => 'Con Stock (>5)'
+            ];
+            $filtrosAplicados['Estado'] = $estados[$request->estado_stock] ?? '';
+        }
+
+        if ($request->filled('buscar')) {
+            $filtrosAplicados['Búsqueda'] = $request->buscar;
         }
 
         // Calcular totales
@@ -146,7 +188,7 @@ class InventarioController extends Controller
 
         $pdf = Pdf::loadView('inventario.pdf', compact(
             'suministros', 
-            'categoriaFiltro',
+            'filtrosAplicados',
             'totalStock',
             'valorTotal'
         ));

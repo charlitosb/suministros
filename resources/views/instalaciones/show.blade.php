@@ -8,7 +8,7 @@
 <div class="card" style="max-width: 900px;">
     <div class="alert alert-info">
         <strong>✓ Instalación Registrada</strong><br>
-        Se instaló 1 unidad del suministro en el equipo seleccionado.
+        Se instalaron <strong>{{ $instalacione->cantidad ?? 1 }}</strong> unidades del suministro en el equipo seleccionado.
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
@@ -24,6 +24,12 @@
             <div class="detail-row">
                 <span class="detail-label">Fecha de Instalación:</span>
                 <span class="detail-value"><strong>{{ $instalacione->fecha_instalacion->format('d/m/Y') }}</strong></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Cantidad Instalada:</span>
+                <span class="detail-value">
+                    <span class="badge badge-warning" style="font-size: 1rem;">{{ $instalacione->cantidad ?? 1 }} unidades</span>
+                </span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Registrado:</span>
@@ -93,6 +99,10 @@
                 <div class="detail-row">
                     <span class="detail-label">Precio Unitario:</span>
                     <span class="detail-value">Q {{ number_format($instalacione->suministro->precio, 2) }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Valor Instalado:</span>
+                    <span class="detail-value"><strong>Q {{ number_format($instalacione->suministro->precio * ($instalacione->cantidad ?? 1), 2) }}</strong></span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Stock Actual:</span>

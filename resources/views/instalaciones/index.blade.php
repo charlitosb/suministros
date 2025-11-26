@@ -24,6 +24,7 @@
                         <th>Fecha</th>
                         <th>Suministro</th>
                         <th>Marca</th>
+                        <th style="text-align: center;">Cantidad</th>
                         <th>Equipo</th>
                         <th>Tipo Equipo</th>
                         <th style="text-align: center;">Acciones</th>
@@ -36,6 +37,9 @@
                         <td>{{ $instalacion->fecha_instalacion->format('d/m/Y') }}</td>
                         <td>{{ $instalacion->suministro->descripcion }}</td>
                         <td>{{ $instalacion->suministro->marca->descripcion }}</td>
+                        <td style="text-align: center;">
+                            <span class="badge badge-warning">{{ $instalacion->cantidad ?? 1 }}</span>
+                        </td>
                         <td>
                             <strong>{{ $instalacion->equipo->numero_serie }}</strong><br>
                             <small class="text-muted">{{ $instalacion->equipo->descripcion }}</small>
@@ -48,7 +52,7 @@
                                 <a href="{{ route('instalaciones.show', $instalacion) }}" class="btn btn-sm btn-info">Ver</a>
                                 <a href="{{ route('instalaciones.edit', $instalacion) }}" class="btn btn-sm btn-warning">Editar</a>
                                 <form action="{{ route('instalaciones.destroy', $instalacion) }}" method="POST" style="display: inline;"
-                                      onsubmit="return confirm('¿Está seguro de eliminar esta instalación? Se devolverá 1 unidad al stock.')">
+                                      onsubmit="return confirm('¿Está seguro de eliminar esta instalación? Se devolverán {{ $instalacion->cantidad ?? 1 }} unidades al stock.')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>

@@ -23,6 +23,7 @@ class InstalacionSuministro extends Model
         'fecha_instalacion',
         'id_suministro',
         'id_equipo',
+        'cantidad',
     ];
 
     /**
@@ -30,6 +31,7 @@ class InstalacionSuministro extends Model
      */
     protected $casts = [
         'fecha_instalacion' => 'date',
+        'cantidad' => 'integer',
     ];
 
     /**
@@ -58,6 +60,7 @@ class InstalacionSuministro extends Model
         // Antes de crear, verificar que haya stock disponible
         static::creating(function ($instalacion) {
             $suministro = Suministro::find($instalacion->id_suministro);
+            $cantidad = $instalacion->cantidad ?? 1;
             
             if (!$suministro) {
                 throw ValidationException::withMessages([
@@ -65,21 +68,23 @@ class InstalacionSuministro extends Model
                 ]);
             }
             
-            if (!$suministro->tieneStock(1)) {
+            if (!$suministro->tieneStock($cantidad)) {
                 throw ValidationException::withMessages([
-                    'id_suministro' => ['No hay stock disponible para este suministro. Stock actual: ' . $suministro->stock]
+                    'id_suministro' => ["No hay stock suficiente. Solicitado: {$cantidad}, Disponible: {$suministro->stock}"]
                 ]);
             }
         });
 
-        // Al crear una instalación, decrementar el stock
+        // Al crear una instalación, decrementar el stock según la cantidad
         static::created(function ($instalacion) {
-            $instalacion->suministro->decrementarStock(1);
+            $cantidad = $instalacion->cantidad ?? 1;
+            $instalacion->suministro->decrementarStock($cantidad);
         });
 
-        // Al eliminar una instalación, incrementar el stock
+        // Al eliminar una instalación, incrementar el stock según la cantidad
         static::deleting(function ($instalacion) {
-            $instalacion->suministro->increment('stock', 1);
+            $cantidad = $instalacion->cantidad ?? 1;
+            $instalacion->suministro->increment('stock', $cantidad);
         });
     }
 }

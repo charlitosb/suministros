@@ -312,8 +312,173 @@ app/
 
 ## ➡️ Siguiente Prompt
 
-**PROMPT 3: Vistas Básicas + Layout**
+**PROMPT 3: Vistas + Layout** incluirá:
 - Layout maestro con Navbar
 - Header y Footer personalizados
 - Vistas CRUD para todas las entidades
 - Vista de Inventario con filtros
+
+---
+
+## 📦 PROMPT 3: Vistas y Layout
+
+### Layout Maestro
+- **Header:** "Sistema de Suministros"
+- **Navbar:** Horizontal con acceso a todos los módulos
+- **Footer:** "Programación WEB" / "Carlos Barrios 202408075"
+- **Diseño:** Minimalista con CSS puro (sin Bootstrap)
+
+### Vistas Creadas
+
+| Módulo | Vistas |
+|--------|--------|
+| Auth | login.blade.php |
+| Dashboard | dashboard.blade.php |
+| Marcas | index, create, edit, show |
+| Categorías | index, create, edit, show |
+| Tipos Equipo | index, create, edit, show |
+| Equipos | index, create, edit, show |
+| Suministros | index, create, edit, show |
+| Ingresos | index, create, edit, show |
+| Instalaciones | index, create, edit, show |
+| Inventario | index, pdf |
+
+### Características de las Vistas
+
+- **Selects dinámicos**: FKs muestran nombres, no IDs
+- **Indicadores de stock**: Colores según nivel (verde/amarillo/rojo)
+- **Validación JavaScript**: Preview de cambios en stock
+- **Filtros**: Búsqueda y filtrado en inventario
+- **Ordenamiento**: Columnas clickeables en tablas
+- **Paginación**: Estilizada y funcional
+- **Alertas**: Mensajes de éxito/error
+- **Confirmaciones**: Antes de eliminar registros
+
+### Archivos del Prompt 3
+
+```
+resources/views/
+├── layouts/
+│   └── app.blade.php              # Layout maestro
+├── auth/
+│   └── login.blade.php            # Formulario de login
+├── dashboard.blade.php            # Dashboard de bienvenida
+├── marcas/
+│   ├── index.blade.php
+│   ├── create.blade.php
+│   ├── edit.blade.php
+│   └── show.blade.php
+├── categorias/
+│   ├── index.blade.php
+│   ├── create.blade.php
+│   ├── edit.blade.php
+│   └── show.blade.php
+├── tipos-equipo/
+│   ├── index.blade.php
+│   ├── create.blade.php
+│   ├── edit.blade.php
+│   └── show.blade.php
+├── equipos/
+│   ├── index.blade.php
+│   ├── create.blade.php
+│   ├── edit.blade.php
+│   └── show.blade.php
+├── suministros/
+│   ├── index.blade.php
+│   ├── create.blade.php
+│   ├── edit.blade.php
+│   └── show.blade.php
+├── ingresos/
+│   ├── index.blade.php
+│   ├── create.blade.php           # Vista con preview de stock
+│   ├── edit.blade.php
+│   └── show.blade.php             # Vista detalle con stock actualizado
+├── instalaciones/
+│   ├── index.blade.php
+│   ├── create.blade.php           # CRÍTICO: Validación robusta de stock
+│   ├── edit.blade.php
+│   └── show.blade.php
+├── inventario/
+│   ├── index.blade.php            # Vista con filtros completos
+│   └── pdf.blade.php              # Template para PDF
+└── vendor/pagination/
+    └── simple-default.blade.php
+```
+
+---
+
+## 🚀 Instalación Completa
+
+### Paso 1: Crear proyecto Laravel
+```bash
+cd C:\xampp\htdocs
+composer create-project laravel/laravel suministros
+cd suministros
+```
+
+### Paso 2: Configurar .env
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=suministros_db
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+### Paso 3: Crear base de datos en phpMyAdmin
+- Nombre: `suministros_db`
+- Cotejamiento: `utf8mb4_unicode_ci`
+
+### Paso 4: Copiar archivos
+Copia las carpetas del proyecto:
+- `app/` → `suministros/app/`
+- `bootstrap/` → `suministros/bootstrap/`
+- `config/` → `suministros/config/`
+- `database/` → `suministros/database/`
+- `resources/` → `suministros/resources/`
+- `routes/` → `suministros/routes/`
+
+### Paso 5: Instalar DomPDF
+```bash
+composer require barryvdh/laravel-dompdf
+```
+
+### Paso 6: Ejecutar migraciones y seeders
+```bash
+php artisan migrate
+php artisan db:seed
+```
+
+### Paso 7: Iniciar servidor
+```bash
+php artisan serve
+```
+
+### Paso 8: Acceder al sistema
+- URL: http://localhost:8000
+- Usuario: admin, carlos o maria
+- Contraseña: password
+
+---
+
+## 👥 Usuarios de Prueba
+
+| Usuario | Nombre | Contraseña |
+|---------|--------|------------|
+| admin | Administrador del Sistema | password |
+| carlos | Carlos Barrios | password |
+| maria | María García | password |
+
+---
+
+## 📊 Datos de Prueba Incluidos
+
+- **5 Usuarios** con contraseña `password`
+- **5 Marcas**: HP, Epson, Logitech, Dell, Canon
+- **5 Categorías**: Toner, Mouse, Teclado, Cartucho, Cable USB
+- **5 Tipos de Equipo**: Laptop, PC, Impresora, Monitor, Scanner
+- **5 Equipos** con números de serie
+- **5 Suministros** con precios y relaciones
+- **5 Ingresos** que incrementaron stock
+- **5 Instalaciones** que decrementaron stock
